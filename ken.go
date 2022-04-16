@@ -49,6 +49,9 @@ type Options struct {
 	// OnCommandError is called when an error occurs
 	// during middleware or command execution.
 	OnCommandError func(err error, ctx *Ctx)
+	// DebugGuild can be set to register commands
+	// to a specific guild for testing purposes.
+	DebugGuild string `default:""`
 }
 
 // Ken is the handler to register, manage and
@@ -85,7 +88,7 @@ var defaultOptions = Options{
 
 // New initializes a new instance of Ken with
 // the passed discordgo Session s and optional
-// Options.
+// Options
 //
 // If no options are passed, default parameters
 // will be applied.
@@ -263,7 +266,7 @@ func (k *Ken) onReady(s *discordgo.Session, e *discordgo.Ready) {
 			acmd := toApplicationCommand(cmd)
 			update = append(update, acmd)
 		} else {
-			ccmd, err = s.ApplicationCommandCreate(e.User.ID, "", toApplicationCommand(cmd))
+			ccmd, err = s.ApplicationCommandCreate(e.User.ID, k.opt.DebugGuild, toApplicationCommand(cmd))
 			if err != nil {
 				k.opt.OnSystemError("command registration", err)
 			} else {
@@ -273,7 +276,7 @@ func (k *Ken) onReady(s *discordgo.Session, e *discordgo.Ready) {
 	}
 
 	if len(update) > 0 {
-		_, err = s.ApplicationCommandBulkOverwrite(e.User.ID, "", update)
+		_, err = s.ApplicationCommandBulkOverwrite(e.User.ID, k.opt.DebugGuild, update)
 		if err != nil {
 			k.opt.OnSystemError("command update", err)
 		}
@@ -282,7 +285,7 @@ func (k *Ken) onReady(s *discordgo.Session, e *discordgo.Ready) {
 	for name, id := range k.idcache {
 		if _, ok := k.cmds[name]; !ok {
 			delete(k.idcache, name)
-			err = s.ApplicationCommandDelete(e.User.ID, "", id)
+			err = s.ApplicationCommandDelete(e.User.ID, k.opt.DebugGuild, id)
 			if err != nil {
 				k.opt.OnSystemError("command delete", err)
 			}
